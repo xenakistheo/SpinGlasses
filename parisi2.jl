@@ -1,6 +1,8 @@
 using FastGaussQuadrature
 using Interpolations
 using Statistics
+using Plots
+using Optim
 
 
 """
@@ -51,32 +53,26 @@ function solve_parisi_p3(tgrid, g; L=8.0, Nx=1001, Q=40)
         # A_i = xi'(b) - xi'(a)
         A = 3.0 * (b^2 - a^2)
         sqrtA = sqrt(A)
+        shifts = sqrtA .* z_nodes  # Q-vector: shift per quadrature node
 
-        # interpolation of Phi at next time level
         interp = LinearInterpolation(xgrid, Phi, extrapolation_bc=Line())
 
-        Phi_new = similar(Phi)
-
-        for (j, x) in enumerate(xgrid)
-            vals = similar(z_nodes)
-
-            for q in eachindex(z_nodes)
-                y = x + sqrtA * z_nodes[q]
-                vals[q] = interp(y)
-            end
-
-            if abs(m) < 1e-10
-                # m = 0 limit: Gaussian average
-                Phi_new[j] = sum(weights .* vals)
-            else
-                # stable log-sum-exp version
-                maxval = maximum(m .* vals)
-                expectation = sum(weights .* exp.(m .* vals .- maxval))
-                Phi_new[j] = (maxval + log(expectation)) / m
-            end
+        # Build Nx×Q matrix: interp_vals[j,q] = Phi(xgrid[j] + shifts[q])
+        interp_vals = similar(Phi, Nx, Q)
+        for q in eachindex(z_nodes)
+            interp_vals[:, q] .= interp.(xgrid .+ shifts[q])
         end
 
-        Phi = Phi_new
+        if abs(m) < 1e-10
+            # m = 0 limit: Gaussian average — matrix-vector multiply
+            Phi = interp_vals * weights
+        else
+            # stable log-sum-exp, vectorized over all x at once
+            scaled = m .* interp_vals                        # Nx × Q
+            maxvals = maximum(scaled, dims=2)                # Nx × 1
+            expectation = exp.(scaled .- maxvals) * weights  # Nx-vector
+            Phi = (vec(maxvals) .+ log.(expectation)) ./ m
+        end
     end
 
     # interpolate Phi(0,0)
@@ -87,15 +83,15 @@ function solve_parisi_p3(tgrid, g; L=8.0, Nx=1001, Q=40)
 end
 
 
-K = 20
-tgrid = collect(range(0.0, 1.0, length=K+1))
+# K = 20
+# tgrid = collect(range(0.0, 1.0, length=K+1))
 
-# Example monotone gamma values
-g = collect(range(0.1, 2.0, length=K))
+# # Example monotone gamma values
+# g = collect(range(0.1, 2.0, length=K))
 
-phi00, xgrid, Phi0 = solve_parisi_p3(tgrid, g)
+# phi00, xgrid, Phi0 = solve_parisi_p3(tgrid, g)
 
-println("Phi_gamma(0,0) = ", phi00)
+# println("Phi_gamma(0,0) = ", phi00)
 
 
 
@@ -110,8 +106,8 @@ function parisi_functional_p3(tgrid, g; L=8.0, Nx=1001, Q=40)
     return phi00 - penalty
 end
 
-Pval = parisi_functional_p3(tgrid, g)
-println("P(gamma) = ", Pval)
+# Pval = parisi_functional_p3(tgrid, g)
+# println("P(gamma) = ", Pval)
 
 
 
@@ -140,9 +136,12 @@ val = objective(theta0) #1.2512224485245205
 
 println(val)
 
-using Optim
+using ADTypes: AutoForwardDiff
+# import ForwardDiff
 
-@time res = optimize(objective, theta0, BFGS()) #24s, 20.057
+# @time res = optimize(objective, theta0, BFGS()) #14s, 16GB
+# @time res = optimize(objective, theta0, LBFGS(; m=10)) #29s, 33GB
+@time res = optimize(objective, theta0, LBFGS(); autodiff=AutoForwardDiff()) #6s, 17GB
 
 theta_star = Optim.minimizer(res)
 g_star = theta_to_g(theta_star)
@@ -164,21 +163,21 @@ plot(
 
 diff(g_star) 
 
+# K=10
+# best_res = nothing
+# best_val = Inf
 
-best_res = nothing
-best_val = Inf
+# for seed in 1:10
+#     theta0 = randn(K)
 
-for seed in 1:20
-    theta0 = randn(K)
+#     res = optimize(objective, theta0, BFGS())
+#     val = Optim.minimum(res)
 
-    res = optimize(objective, theta0, BFGS())
-    val = Optim.minimum(res)
+#     if val < best_val
+#         best_val = val
+#         best_res = res
+#     end
+# end
 
-    if val < best_val
-        best_val = val
-        best_res = res
-    end
-end
-
-theta_star = Optim.minimizer(best_res)
-g_star = theta_to_g(theta_star)
+# theta_star = Optim.minimizer(best_res)
+# g_star = theta_to_g(theta_star)
