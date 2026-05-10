@@ -3,6 +3,7 @@ using Interpolations
 using Statistics
 using Plots
 using Optim
+import ForwardDiff
 
 
 """
@@ -124,12 +125,21 @@ function make_objective(tgrid; L=8.0, Nx=1001, Q=40)
     return objective
 end
 
-K = 10
+function make_objective_g(tgrid; L=8.0, Nx=1001, Q=40)
+    function objective(g)
+        return parisi_functional_p3(tgrid, g; L=L, Nx=Nx, Q=Q)
+    end
+    return objective
+end
+
+K = 30
 tgrid = collect(range(0.0, 1.0, length=K+1))
 
 objective = make_objective(tgrid; L=8.0, Nx=1001, Q=40)
+objective_g = make_objective_g(tgrid; L=8.0, Nx=1001, Q=40)
 
 theta0 = log.(fill(0.05, K))  # gives small positive increments
+
 
 g0 = theta_to_g(theta0)
 val = objective(theta0) #1.2512224485245205
@@ -137,19 +147,29 @@ val = objective(theta0) #1.2512224485245205
 println(val)
 
 using ADTypes: AutoForwardDiff
-# import ForwardDiff
+
+# lower = zeros(K)  # theta can be any real number, but we want g to be nonnegative
+# upper = ones(K)
+
 
 # @time res = optimize(objective, theta0, BFGS()) #14s, 16GB
 # @time res = optimize(objective, theta0, LBFGS(; m=10)) #29s, 33GB
 @time res = optimize(objective, theta0, LBFGS(); autodiff=AutoForwardDiff()) #6s, 17GB
 
+# @time res = optimize(objective_g, g0, LBFGS(); autodiff=AutoForwardDiff()) #
+# @time res = optimize(objective_g, lower, upper, g0, Fminbox(LBFGS()); autodiff=AutoForwardDiff()) #
+
+
+# g_star = Optim.minimizer(res)
+
 theta_star = Optim.minimizer(res)
 g_star = theta_to_g(theta_star)
 
-println("Optimized P(gamma) = ", objective(theta_star))
+println("Optimized P(gamma) = ", objective(theta_star))# 1.1505790804832279
 println(g_star) #0.9783148176005934
 
-using Plots
+# println("Optimized P(gamma) = ", objective_g(g_star))
+# println(g_star) #0.9783148176005934
 
 plot(
     tgrid[1:end-1],
@@ -163,21 +183,39 @@ plot(
 
 diff(g_star) 
 
-# K=10
-# best_res = nothing
-# best_val = Inf
 
-# for seed in 1:10
-#     theta0 = randn(K)
+best_res = nothing
+best_val = Inf
 
-#     res = optimize(objective, theta0, BFGS())
-#     val = Optim.minimum(res)
+for seed in 1:10
+    @show seed
+    theta0 = randn(K)
 
-#     if val < best_val
-#         best_val = val
-#         best_res = res
-#     end
-# end
+    res = optimize(objective, theta0, LBFGS(); autodiff=AutoForwardDiff())
+    val = Optim.minimum(res)
 
-# theta_star = Optim.minimizer(best_res)
-# g_star = theta_to_g(theta_star)
+    if val < best_val
+        @show val
+        best_val = val
+        best_res = res
+    end
+end
+
+theta_star = Optim.minimizer(best_res)
+g_star = theta_to_g(theta_star)
+
+plot(
+    tgrid[1:end-1],
+    g_star,
+    seriestype=:steppost,
+    xlabel="t",
+    ylabel="γ*(t)",
+    linewidth=2,
+    label="optimized γ"
+)
+
+
+# We expect flat region for p=3
+# for p=2 we should not see flat region, but rather a smooth increase in gamma.
+# for p\geq 4 we should see flatness
+
