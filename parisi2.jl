@@ -136,7 +136,7 @@ objective = make_objective(tgrid; L=8.0, Nx=1001, Q=40)
 theta0 = log.(fill(0.05, K))  # gives small positive increments
 
 g0 = theta_to_g(theta0)
-val = objective(theta0)
+val = objective(theta0) #1.2512224485245205
 
 println(val)
 
@@ -147,7 +147,8 @@ using Optim
 theta_star = Optim.minimizer(res)
 g_star = theta_to_g(theta_star)
 
-println(g_star)
+println("Optimized P(gamma) = ", objective(theta_star))
+println(g_star) #0.9783148176005934
 
 using Plots
 
