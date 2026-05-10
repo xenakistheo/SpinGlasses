@@ -1,9 +1,6 @@
 using FastGaussQuadrature
 using Interpolations
 using Statistics
-using Plots
-using Optim
-import ForwardDiff
 
 
 """
@@ -219,3 +216,4 @@ plot(
 # for p=2 we should not see flat region, but rather a smooth increase in gamma.
 # for p\geq 4 we should see flatness
 
+# For both K=10 and K=30 we see flatness in gamma all the way until t = 1. 
