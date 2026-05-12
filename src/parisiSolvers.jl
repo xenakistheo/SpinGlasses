@@ -29,7 +29,7 @@ function solve_parisi(tgrid, g; p=3, L=8.0, Nx=1001, Q=40)
     @assert length(tgrid) == K + 1
     @assert tgrid[1] ≈ 0.0
     @assert tgrid[end] ≈ 1.0
-    @assert all(g .>= 0.0)
+    # @assert all(g .>= 0.0)
 
     # spatial grid
     xgrid = collect(range(-L, L, length=Nx))
@@ -91,25 +91,43 @@ function parisi_functional(tgrid, g; p=3, L=8.0, Nx=1001, Q=40)
 
     penalty = 0.0
     for i in eachindex(g)
-        penalty += g[i] * (tgrid[i+1]^p - tgrid[i]^p)
+        penalty += 0.5 * (p-1) * g[i] * (tgrid[i+1]^p - tgrid[i]^p)
     end
 
     return phi00 - penalty
 end
 
-
-function theta_to_g(theta)
+# OLD
+function softplus(theta)
     increments = log1p.(exp.(theta))  # softplus
     return cumsum(increments)
 end
 
-function make_objective(tgrid; p=3, L=8.0, Nx=1001, Q=40)
+# Bound [0,1]: Numerically unstable 
+function softmax(theta)
+    weights = exp.(theta)
+    probabilities = weights ./ sum(weights)
+    return cumsum(probabilities)
+end
+
+# Bound [0,1]: Stable version
+function softmax_stable(theta)
+    shifted = theta .- maximum(theta)
+    weights = exp.(shifted)
+    probabilities = weights ./ sum(weights)
+    return cumsum(probabilities)
+end
+
+
+
+function make_objective(tgrid; p=3, L=8.0, Nx=1001, Q=40, theta_to_g=softplus)
     function objective(theta)
         g = theta_to_g(theta)
         return parisi_functional(tgrid, g; p=p, L=L, Nx=Nx, Q=Q)
     end
     return objective
 end
+
 
 
 function make_objective_g(tgrid; p=3, L=8.0, Nx=1001, Q=40)
