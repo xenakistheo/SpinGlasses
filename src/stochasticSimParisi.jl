@@ -1,4 +1,13 @@
+"""
+This file contains a "naive" calculation of the solution 
+to the Parisi PDE using a stochastic simulation. 
+The algorithm is O(N^m) where N is the number of simulations 
+and m is the number of steps in the discretization of the time interval [0,1]. 
+The code is not optimized and serves as a proof of concept for the algorithm.
 
+Run at your own risk :) 
+[It might take a while to run]
+"""
 
 ### Equation 7.3 in Optimizing Mean Field Spin Glasses
 function phi(j, x, gammas, rootR, G, Nsim, m)
@@ -42,7 +51,3 @@ plot(Nsim_vals, time_vals, xlabel="N",
     ylabel="time [s]", title="time complexity, m=10")
 
 
-#=
-To tackle complexity of algorithm O(N^m), one might memoize different x-values
-discretize x in [-2m,2m] and get values from there. 
-=#
