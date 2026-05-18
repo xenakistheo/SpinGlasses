@@ -2,7 +2,7 @@
 
 ## Course Project: 6.7720[J]/18.619[J]/15.070[J] Discrete Probability and Stochastic Processes
 
-[![Preview](https://img.shields.io/badge/Download%20as%20PDF-EF3939?style=flat&logo=adobeacrobatreader&logoColor=white&color=black&labelColor=ec1c24)](https://raw.githubusercontent.com/xenakistheo/SpinGlasses/blob/main/ParisiPDE_OGP_SpinGlass.pdf)
+[![Preview](https://img.shields.io/badge/Download%20as%20PDF-EF3939?style=flat&logo=adobeacrobatreader&logoColor=white&color=black&labelColor=ec1c24)](https://raw.githubusercontent.com/xenakistheo/SpinGlasses/main/ParisiPDE_OGP_SpinGlass.pdf)
 
 Utkarsh [utkarsh5@mit.edu](mailto:utkarsh5@mit.edu), Theodoros Xenakis [txenaxis@mit.edu](mailto:txenaxis@mit.edu)
 
